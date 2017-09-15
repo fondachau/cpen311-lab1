@@ -200,29 +200,15 @@ wire Sample_Clk_Signal;
 // Insert your code for Lab1 here!
 //
 //
-module counter(input clk, input reset, output [31:0] Q)
+
+counter counter1(clk, reset, Q);
 
 
-always @ (posedge (clk), posedge reset)
-begin 
-	if (reset)
-		Q<=32'b0;
-		reset<=1'b0;
-	else
-		Q<=Q+32'b1;
-end
-endmodule
+clockdiv clockdiv1(d,desiredfreq,newclock);
 
-module clockdiv #parameter (desiredfreq=587)(input [31:0] d,output newclock)
 
-counter counter1(clk, reset, count);
-if (count==(1/desiredfreq)*50000000/2)
-	reset<=1'b1;
-	newclock<=~newclock;
-	
-	
-	
-	
+getdesiredfreq getfreq (clk, sw[3:1],desiredfreq);
+
 
 assign Sample_Clk_Signal = Clock_1KHz;
 
@@ -562,3 +548,40 @@ audio_control(
                     
             
 endmodule
+module counter(input clk, input reset, output [31:0] Q)
+always @ (posedge (clk), posedge reset)
+begin 
+	if (reset)
+		Q<=32'b0;
+		reset<=1'b0;
+	else
+		Q<=Q+32'b1;
+end
+endmodule
+
+module clockdiv (input [31:0] d,input [10:1] desiredfreq, output newclock)
+//#parameter (desiredfreq=587)
+if (reset) newclock<= 1'b0;
+else if (Q==(1/desiredfreq)*50000000/2)
+	newclock<=~newclock;
+else
+	newclock<= newclock;
+endmodule
+
+module getdesiredfreq (input clk, input sw[3:1],output [10:0] desiredfreq)
+always @ (*)
+	case(sw[3:1])
+	3'b000: desiredfreq<=523;
+	3'b001: desiredfreq<=587;
+	3'b010: desiredfreq<=659;
+	3'b011: desiredfreq<=598;
+	3'b100: desiredfreq<=783;
+	3'b101: desiredfreq<=987;
+	3'b110: desiredfreq<=880;
+	3'b111: desiredfreq<=1046;
+	default: desiredfreq<=523;
+	endcase
+	end
+	endmodule
+	
+	
