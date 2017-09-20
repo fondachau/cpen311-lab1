@@ -202,16 +202,15 @@ wire Sample_Clk_Signal;
 //
 
 
-logic reset;
-logic d;
-logic Q;
-logic desiredfreq;
 logic newclock;	
 
-counter counter1(.clk(CLK_50M), .reset(reset), .Q(Q));
+logic reset;
+logic [31:0]d;
+logic [10:0]desiredfreq;
+	
+getdesiredfreq getfreq (.clk(CLK_50M), .SW(SW[2:0]),.desiredfreq(desiredfreq));
+counter counter1(.clk(CLK_50M), .reset(reset), .Q(d));
 clockdiv clockdiv1(.d(d),.desiredfreq(desiredfreq),.clk(CLK_50M),.reset(reset),.newclock(newclock));
-getdesiredfreq getfreq (.clk(CLK_50M), .SW(SW[3:1]),.desiredfreq(desiredfreq));
-
 
 assign Sample_Clk_Signal = newclock;
 
@@ -550,37 +549,38 @@ audio_control(
 //========================================================================================================================
                     
             
-endmodule
+endmodule 
 module counter(input clk, input reset, output [31:0] Q);
 always_ff @ (posedge (clk), posedge reset)
 begin 
 	if (reset)
 		begin
 		Q<=32'b0;
-
 		end
 	else
 		Q<=Q+32'b1;
 end
 endmodule
 
-module clockdiv (input [31:0] d,input [10:1] desiredfreq,input clk, output reset, output newclock);
+module clockdiv (input [31:0] d,input [10:0] desiredfreq,input clk, output reset, output newclock);
 //#parameter (desiredfreq=587)
 always_ff @ (posedge (clk))
 begin
-	if (d==((1/desiredfreq)*50000000/2))
-begin
-	newclock<=1'b1;
-	end
-	else if (d==((1/desiredfreq)*50000000))
-begin
-	newclock<=1'b0;
-	reset<=1'b1;
-	end
-else
-	newclock<= newclock;
-	reset<=1'b0;
-	end
+	if (d==32'b101)
+		begin
+		newclock<=1'b1;
+		end
+	else if (d==32'b1011)
+		begin
+		newclock<=1'b0;
+		reset<=1'b1;
+		end
+	else
+		begin
+		newclock<= newclock;
+		reset<=1'b0;
+		end
+end
 endmodule
 
 module getdesiredfreq (input clk, input [2:0] SW,output [10:0] desiredfreq);
@@ -596,4 +596,4 @@ always_comb
 	3'b111: desiredfreq<=1046;
 	default: desiredfreq<=1000;
 	endcase
-	endmodule
+endmodule 
