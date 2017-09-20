@@ -201,16 +201,19 @@ wire Sample_Clk_Signal;
 //
 //
 
-counter counter1(clk, reset, Q);
+
+logic reset;
+logic d;
+logic Q;
+logic desiredfreq;
+logic newclock;	
+
+counter counter1(.clk(CLK_50M), .reset(reset), .Q(Q));
+clockdiv clockdiv1(.d(d),.desiredfreq(desiredfreq),.clk(CLK_50M),.reset(reset),.newclock(newclock));
+getdesiredfreq getfreq (.clk(CLK_50M), .SW(SW[3:1]),.desiredfreq(desiredfreq));
 
 
-clockdiv clockdiv1(d,desiredfreq,newclock);
-
-
-getdesiredfreq getfreq (clk, sw[3:1],desiredfreq);
-
-
-assign Sample_Clk_Signal = Clock_1KHz;
+assign Sample_Clk_Signal = newclock;
 
 //Audio Generation Signal
 //Note that the audio needs signed data - so convert 1 bit to 8 bits signed
@@ -548,29 +551,41 @@ audio_control(
                     
             
 endmodule
-module counter(input clk, input reset, output [31:0] Q)
-always @ (posedge (clk), posedge reset)
+module counter(input clk, input reset, output [31:0] Q);
+always_ff @ (posedge (clk), posedge reset)
 begin 
 	if (reset)
+		begin
 		Q<=32'b0;
-		reset<=1'b0;
+
+		end
 	else
 		Q<=Q+32'b1;
 end
 endmodule
 
-module clockdiv (input [31:0] d,input [10:1] desiredfreq, output newclock)
+module clockdiv (input [31:0] d,input [10:1] desiredfreq,input clk, output reset, output newclock);
 //#parameter (desiredfreq=587)
-if (reset) newclock<= 1'b0;
-else if (Q==(1/desiredfreq)*50000000/2)
-	newclock<=~newclock;
+always_ff @ (posedge (clk))
+begin
+	if (d==((1/desiredfreq)*50000000/2))
+begin
+	newclock<=1'b1;
+	end
+	else if (d==((1/desiredfreq)*50000000))
+begin
+	newclock<=1'b0;
+	reset<=1'b1;
+	end
 else
 	newclock<= newclock;
+	reset<=1'b0;
+	end
 endmodule
 
-module getdesiredfreq (input clk, input sw[3:1],output [10:0] desiredfreq)
-always @ (*)
-	case(sw[3:1])
+module getdesiredfreq (input clk, input [2:0] SW,output [10:0] desiredfreq);
+always_comb
+	case(SW[2:0])
 	3'b000: desiredfreq<=523;
 	3'b001: desiredfreq<=587;
 	3'b010: desiredfreq<=659;
@@ -579,9 +594,6 @@ always @ (*)
 	3'b101: desiredfreq<=987;
 	3'b110: desiredfreq<=880;
 	3'b111: desiredfreq<=1046;
-	default: desiredfreq<=523;
+	default: desiredfreq<=1000;
 	endcase
-	end
 	endmodule
-	
-	
