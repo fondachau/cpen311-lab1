@@ -1,0 +1,47 @@
+module Basic_Organ_Solution(input logic clock, output logic [9:0]LEDR);
+
+logic [3:0] current;
+logic [3:0] next;
+logic direction;
+
+lightshift lights (.clock(clock), .direction(direction), .currentlight(current),.nextlight(next),.LEDR(LEDR));
+lightdirection directiondecide (.clock(clock),.nextlight(next),.direction(direction));
+flipflop currentnextshift (.clock(clock), .a(next),.out(current));
+endmodule
+
+module lightshift (input logic clock, input logic direction, input logic [3:0] currentlight,output logic [3:0] nextlight, output logic [9:0] LEDR);
+always_ff @ (posedge clock)
+if (direction)
+begin
+LEDR[currentlight]=1'b0;
+nextlight=currentlight+1'b1;
+LEDR[nextlight]=1'b1;
+end
+else if(!direction)
+begin
+
+LEDR[currentlight]=1'b0;
+nextlight=currentlight-1'b1;
+LEDR[nextlight]=1'b1;
+end
+else
+begin
+nextlight=4'b0;
+end
+endmodule
+
+
+module lightdirection (input logic clock, input logic [3:0] nextlight, output logic direction);
+always_ff @ (posedge clock)
+if (nextlight==4'd9)
+	direction=1'b0;
+else if (nextlight==4'd0)
+	direction=1'b1;
+else
+	direction=direction;
+endmodule
+
+module flipflop (input logic [3:0] a, input logic clock, output logic [3:0]out);
+always_ff@(posedge clock)
+out<=a;
+endmodule
