@@ -204,16 +204,18 @@ logic newclock;
 logic reset;
 logic [31:0]d;
 logic [31:0]desiredfreq;
-logic [2:0] oldSW;
 //logic ledclock;
-
-
+logic clk_1k;
+logic [31:0]d1;
+logic reset2;
 getdesiredfreq getfreq (.clk(CLK_50M), .SW(SW[3:1]),.desiredfreq(desiredfreq));
 counter counter1(.clk(CLK_50M), .reset(reset), .Q(d));
 clockdiv clockdiv1(.d(d),.desiredfreq(desiredfreq),.clk(CLK_50M),.reset(reset),.newclock(newclock));
 mux2 mux (.a(newclock), .b(1'b0),.sel(SW[0]),.out(Sample_Clk_Signal));
 
-
+LEDLIGHTS lights_1K (.clock(clk_1k),.LED(LED[7:0]));
+counter counter2(.clk(CLK_50M), .reset(reset2), .Q(d1));
+clockdiv_1hz clock1k (.clk(CLK_50M),.newclock(clk_1k),.d(d1),.reset(reset2));
 
 //Audio Generation Signal
 //Note that the audio needs signed data - so convert 1 bit to 8 bits signed
@@ -587,15 +589,15 @@ endmodule
 module getdesiredfreq (input logic clk, input logic [2:0] SW,output logic [31:0] desiredfreq);
 always_comb
 	case(SW[2:0])
-	3'b000: desiredfreq<=32'd587;
-	3'b001: desiredfreq<=32'd523;
-	3'b010: desiredfreq<=32'd659;
-	3'b011: desiredfreq<=32'd698;
-	3'b100: desiredfreq<=32'd783;
-	3'b101: desiredfreq<=32'd987;
-	3'b110: desiredfreq<=32'd880;
-	3'b111: desiredfreq<=32'd1046;
-	default: desiredfreq<=32'd1000;
+	3'b000: desiredfreq=32'd587;
+	3'b001: desiredfreq=32'd523;
+	3'b010: desiredfreq=32'd659;
+	3'b011: desiredfreq=32'd698;
+	3'b100: desiredfreq=32'd783;
+	3'b101: desiredfreq=32'd987;
+	3'b110: desiredfreq=32'd880;
+	3'b111: desiredfreq=32'd1046;
+	default: desiredfreq=32'd1000;
 	endcase
 endmodule 
 
@@ -604,12 +606,7 @@ module mux2 (input logic a, input logic b, input logic sel, output logic out);
 assign out=sel?a:b;
 endmodule
 
-//module flipflop (input logic a, input logic clk, output logic out);
-//always_ff @ (posedge clk)
-//out<=a;
-//endmodule
-
-module clockdiv_1hz (input logic [31:0] d,input logic clk, output logic newclock);
+module clockdiv_1hz (input logic [31:0] d,input logic clk, output logic newclock,output logic reset);
 always_ff @ (posedge (clk))
 begin
 	if (d==(32'd25000000))
@@ -619,10 +616,61 @@ begin
 	else if (d==(32'd50000000))
 		begin
 		newclock<=1'b0;
+		reset<=1'b1;
+		
 		end
 	else
 		begin
 		newclock<= newclock;
+		reset<=1'b0;
 		end
 end
+endmodule
+
+
+module LEDLIGHTS(input logic clock, output logic [9:0]LED);
+
+logic [3:0] current;
+logic [3:0] next;
+logic direction;
+
+lightshift lights (.clock(clock), .direction(direction), .currentlight(current),.nextlight(next),.LED(LED[7:0]));
+lightdirection directiondecide (.clock(clock),.nextlight(next),.direction(direction));
+flipflop currentnextshift (.clock(clock), .a(next),.out(current));
+endmodule
+
+module lightshift (input logic clock, input logic direction, input logic [3:0] currentlight,output logic [3:0] nextlight, output logic [7:0] LED);
+always_ff @ (posedge clock)
+if (direction)
+begin
+LED[currentlight]=1'b0;
+nextlight=currentlight+1'b1;
+LED[nextlight]=1'b1;
+end
+else if(direction==0)
+begin
+LED[currentlight]=1'b0;
+nextlight=currentlight-1'b1;
+LED[nextlight]=1'b1;
+end
+else
+begin
+nextlight=4'b0;
+end
+endmodule
+
+
+module lightdirection (input logic clock, input logic [3:0] nextlight, output logic direction);
+always_ff @ (posedge clock)
+if (nextlight==4'd7)
+	direction<=1'b0;
+else if (nextlight==4'd0)
+	direction<=1'b1;
+else
+	direction=direction;
+endmodule
+
+module flipflop (input logic [3:0] a, input logic clock, output logic [3:0]out);
+always_ff@(posedge clock)
+out<=a;
 endmodule
