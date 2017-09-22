@@ -1,10 +1,19 @@
-module Basic_Organ_Solution(input logic clock, output logic [9:0]LEDR);
+module Basic_Organ_Solution(input logic CLK_50M, output logic reset2, output logic [31:0] d1,output logic [7:0]LED,output logic clk_1k);
+
+
+
+LEDLIGHTS lights_1K (.clock(clk_1k),.LED(LED[7:0]));
+counter counter2(.clk(CLK_50M), .reset(reset2), .Q(d1));
+clockdiv_1hz clock1k (.clk(CLK_50M),.newclock(clk_1k),.d(d1),.reset(reset2));
+endmodule
+
+module LEDLIGHTS(input logic clock, output logic [9:0]LED);
 
 logic [3:0] current;
 logic [3:0] next;
 logic direction;
 
-lightshift lights (.clock(clock), .direction(direction), .currentlight(current),.nextlight(next),.LEDR(LEDR));
+lightshift lights (.clock(clock), .direction(direction), .currentlight(current),.nextlight(next),.LEDR(LED));
 lightdirection directiondecide (.clock(clock),.nextlight(next),.direction(direction));
 flipflop currentnextshift (.clock(clock), .a(next),.out(current));
 endmodule
@@ -17,9 +26,8 @@ LEDR[currentlight]=1'b0;
 nextlight=currentlight+1'b1;
 LEDR[nextlight]=1'b1;
 end
-else if(!direction)
+else if(direction==0)
 begin
-
 LEDR[currentlight]=1'b0;
 nextlight=currentlight-1'b1;
 LEDR[nextlight]=1'b1;
@@ -34,9 +42,9 @@ endmodule
 module lightdirection (input logic clock, input logic [3:0] nextlight, output logic direction);
 always_ff @ (posedge clock)
 if (nextlight==4'd9)
-	direction=1'b0;
+	direction<=1'b0;
 else if (nextlight==4'd0)
-	direction=1'b1;
+	direction<=1'b1;
 else
 	direction=direction;
 endmodule
@@ -44,4 +52,39 @@ endmodule
 module flipflop (input logic [3:0] a, input logic clock, output logic [3:0]out);
 always_ff@(posedge clock)
 out<=a;
+endmodule
+
+ 
+module counter(input logic clk, input logic reset, output logic [31:0] Q);
+always_ff @ (posedge (clk), posedge reset)
+begin 
+	if (reset)
+		begin
+		Q<=32'b0;
+		end
+	else
+		Q<=Q+32'b1;
+end
+endmodule
+
+
+module clockdiv_1hz (input logic [31:0] d,input logic clk, output logic newclock,output logic reset);
+always_ff @ (posedge (clk))
+begin
+	if (d==(32'd25))
+		begin
+		newclock<=1'b1;
+		end
+	else if (d==(32'd50))
+		begin
+		newclock<=1'b0;
+		reset<=1'b1;
+		
+		end
+	else
+		begin
+		newclock<= newclock;
+		reset<=1'b0;
+		end
+end
 endmodule
