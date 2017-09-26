@@ -554,26 +554,47 @@ audio_control(
             
 endmodule 
 module counter(input logic clk, input logic reset, output logic [31:0] Q);
-always_ff @ (posedge (clk), posedge reset)
+always_ff @ (posedge (clk))
 begin 
 	if (reset)
 		begin
-		Q<=32'b0;
+		Q=32'b1;
 		end
 	else
-		Q<=Q+32'b1;
+		Q=Q+32'b1;
 end
 endmodule
+
+module clockdiv_1hz (input logic [31:0] d,input logic clk, output logic newclock,output logic reset);
+always_ff @ (posedge (clk))
+begin
+	if (d==(32'd25000000-32'd1))
+		begin
+		newclock<=1'b1;
+		end
+	else if (d==(32'd50000000-32'd1))
+		begin
+		newclock<=1'b0;
+		reset<=1'b1;
+		end
+	else
+		begin
+		newclock<= newclock;
+		reset<=1'b0;
+		end
+end
+endmodule
+
 
 module clockdiv (input logic [31:0] d,input logic [31:0] desiredfreq,input logic clk, output logic reset, output logic newclock);
 
 always_ff @ (posedge (clk))
 begin
-	if (d==(32'd25000000/(desiredfreq)))
+	if (d==((32'd25000000/(desiredfreq))-32'd1))
 		begin
 		newclock<=1'b1;
 		end
-	else if (d>=(32'd50000000/(desiredfreq)))
+	else if (d>=((32'd50000000/(desiredfreq))-32'b1))
 		begin
 		newclock<=1'b0;
 		reset<=1'b1;
@@ -606,29 +627,9 @@ module mux2 (input logic a, input logic b, input logic sel, output logic out);
 assign out=sel?a:b;
 endmodule
 
-module clockdiv_1hz (input logic [31:0] d,input logic clk, output logic newclock,output logic reset);
-always_ff @ (posedge (clk))
-begin
-	if (d==(32'd25000000))
-		begin
-		newclock<=1'b1;
-		end
-	else if (d==(32'd50000000))
-		begin
-		newclock<=1'b0;
-		reset<=1'b1;
-		
-		end
-	else
-		begin
-		newclock<= newclock;
-		reset<=1'b0;
-		end
-end
-endmodule
 
 
-module LEDLIGHTS(input logic clock, output logic [9:0]LED);
+module LEDLIGHTS(input logic clock, output logic [7:0]LED);
 
 logic [3:0] current;
 logic [3:0] next;
@@ -639,18 +640,19 @@ lightdirection directiondecide (.clock(clock),.nextlight(next),.direction(direct
 flipflop currentnextshift (.clock(clock), .a(next),.out(current));
 endmodule
 
+
 module lightshift (input logic clock, input logic direction, input logic [3:0] currentlight,output logic [3:0] nextlight, output logic [7:0] LED);
 always_ff @ (posedge clock)
 if (direction)
 begin
 LED[currentlight]=1'b0;
-nextlight=currentlight+1'b1;
+nextlight<=currentlight-1'b1;
 LED[nextlight]=1'b1;
 end
 else if(direction==0)
 begin
 LED[currentlight]=1'b0;
-nextlight=currentlight-1'b1;
+nextlight<=currentlight+1'b1;
 LED[nextlight]=1'b1;
 end
 else
@@ -663,9 +665,9 @@ endmodule
 module lightdirection (input logic clock, input logic [3:0] nextlight, output logic direction);
 always_ff @ (posedge clock)
 if (nextlight==4'd7)
-	direction<=1'b0;
-else if (nextlight==4'd0)
 	direction<=1'b1;
+else if (nextlight==4'd0)
+	direction<=1'b0;
 else
 	direction=direction;
 endmodule
@@ -674,3 +676,5 @@ module flipflop (input logic [3:0] a, input logic clock, output logic [3:0]out);
 always_ff@(posedge clock)
 out<=a;
 endmodule
+
+ 
