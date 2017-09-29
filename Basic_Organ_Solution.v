@@ -212,12 +212,11 @@ logic reset2; // reset value for led clock
  
 logic [23:0] LcdDisplay; 
 logic [15:0] LcdinfoDisplay;
-logic [47:0] ScopeInfoA;
 logic [31:0] ScopeInfoB;
 
 // components for speakers
 getdesiredfreq getfreq (.clk(CLK_50M), .SW(SW[3:1]),.desiredfreq(desiredfreq),
-.LcdDisplay(LcdDisplay),.LcdinfoDisplay(LcdinfoDisplay),.ScopeInfoA(ScopeInfoA),.ScopeInfoB(ScopeInfoB));
+.LcdDisplay(LcdDisplay),.LcdinfoDisplay(LcdinfoDisplay),.ScopeInfoB(ScopeInfoB));
 counter counter1(.clk(CLK_50M), .reset(reset), .Q(d));
 clockdiv clockdiv1(.d(d),.desiredfreq(desiredfreq),.clk(CLK_50M),.reset(reset),.newclock(newclock));
 mux2 mux (.a(newclock), .b(1'b0),.sel(SW[0]),.out(Sample_Clk_Signal));
@@ -633,7 +632,6 @@ input logic [2:0] SW,
 output logic [31:0] desiredfreq, 
 output logic [23:0] LcdDisplay,
 output logic [15:0] LcdinfoDisplay,
-output logic [47:0] ScopeInfoA,
 output logic [31:0] ScopeInfoB);
 
 
@@ -732,15 +730,13 @@ always_comb
 		desiredfreq=32'd523; 
 		LcdDisplay={character_D,character_O,character_space}; 
 		LcdinfoDisplay=16'h0523;
-		ScopeInfoA={character_5,character_2,character_3,character_H,character_lowercase_z,character_space};
-				ScopeInfoB={character_S,character_0,character_0,character_0};
+		ScopeInfoB={character_S,character_0,character_0,character_0};
 		end
 	3'b001: 
 		begin 
 		desiredfreq=32'd587; 
 		LcdDisplay={character_R,character_E,character_space}; 
 		LcdinfoDisplay=16'h0587;
-		ScopeInfoA={character_5,character_8,character_7,character_H,character_lowercase_z,character_space};
 		ScopeInfoB={character_S,character_0,character_0,character_1};
 		end
 	3'b010: 
@@ -748,40 +744,34 @@ always_comb
 		desiredfreq=32'd659; 
 		LcdDisplay={character_M, character_E,character_space}; 
 		LcdinfoDisplay=16'h0659;
-		ScopeInfoA={character_6,character_5,character_9,character_H,character_lowercase_z,character_space};
-				ScopeInfoB={character_S,character_0,character_1,character_0};
+		ScopeInfoB={character_S,character_0,character_1,character_0};
 		end
 	3'b011: 
 		begin 
 		desiredfreq=32'd698; 
 		LcdDisplay={character_F, character_A,character_space}; 
 		LcdinfoDisplay=16'h0698;
-		ScopeInfoA={character_6,character_9,character_8,character_H,character_lowercase_z,character_space};
-				ScopeInfoB={character_S,character_0,character_1,character_1};
+		ScopeInfoB={character_S,character_0,character_1,character_1};
 		end
 	3'b100: 
 		begin 
 		desiredfreq=32'd783; 
 		LcdDisplay={character_S, character_O,character_space}; 
 		LcdinfoDisplay=16'h0783;
-		ScopeInfoA={character_7,character_8,character_3,character_H,character_lowercase_z,character_space};
-				ScopeInfoB={character_S,character_1,character_0,character_0};
+		ScopeInfoB={character_S,character_1,character_0,character_0};
 		end
 	3'b101: 
 		begin 
 		desiredfreq=32'd880; 
 		LcdDisplay={character_L, character_A,character_space}; 
 		LcdinfoDisplay=16'h0880;
-		ScopeInfoA={character_8,character_8,character_0,character_H,character_lowercase_z,character_space};
 		ScopeInfoB={character_S,character_1,character_0,character_1};
 		end
 	3'b110: 
 		begin 
 		desiredfreq=32'd987; 
 		LcdDisplay={character_T, character_I,character_space};
-		LcdinfoDisplay={character_9,character_8,character_7,character_H,character_lowercase_z,character_space,character_S,character_W,character_1,character_1,character_0}; 
 		LcdinfoDisplay=16'h0987;
-		ScopeInfoA={character_9,character_8,character_7,character_H,character_lowercase_z,character_space};
 		ScopeInfoB={character_S,character_1,character_1,character_0};
 		end
 	3'b111: 
@@ -789,7 +779,6 @@ always_comb
 		desiredfreq=32'd1046; 
 		LcdDisplay={character_D, character_O, character_2};
 		LcdinfoDisplay=16'h1046;
-		ScopeInfoA={character_1,character_0,character_4,character_6,character_H,character_lowercase_z,character_space};
 		ScopeInfoB={character_S,character_1,character_1,character_1};
 		end
 	default:
@@ -797,7 +786,6 @@ always_comb
 		desiredfreq=32'd1000; 
 		LcdDisplay={character_N, character_O,character_space};		
 		LcdinfoDisplay=16'h1000;
-		ScopeInfoA={character_1,character_0,character_0,character_0,character_H,character_lowercase_z,character_space};
 		ScopeInfoB={character_S,character_lowercase_z,character_lowercase_z,character_lowercase_z};
 		end 
 	endcase
