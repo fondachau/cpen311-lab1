@@ -1,3 +1,4 @@
+
 `default_nettype none
 module Basic_Organ_Solution(
 
@@ -78,30 +79,6 @@ inout                       FPGA_I2C_SDAT;
 //////////// GPIO //////////
 inout           [35:0]      GPIO_0;
 inout           [35:0]      GPIO_1;                             
-
-
-//=======================================================
-//  REG/WIRE declarations
-//=======================================================
-// Input and output declarations
-logic CLK_50M;
-logic  [7:0] LED;
-assign CLK_50M =  CLOCK_50;
-assign LEDR[7:0] = LED[7:0];
-
-
-wire            [7:0]      LCD_DATA;
-wire                       LCD_EN;
-wire                       LCD_ON;
-wire                       LCD_RS;
-wire                       LCD_RW;
-
-assign GPIO_0[7:0] = LCD_DATA;
-assign GPIO_0[8] = LCD_EN;
-assign GPIO_0[9] = LCD_ON;
-assign GPIO_0[10] = LCD_RS;
-assign GPIO_0[11] = LCD_RS;
-assign GPIO_0[12] = LCD_RW;
 
 
 //Character definitions
@@ -192,6 +169,31 @@ parameter character_space=8'h20;           //' '
 parameter character_exclaim=8'h21;          //'!'
 
 
+
+//=======================================================
+//  REG/WIRE declarations
+//=======================================================
+// Input and output declarations
+logic CLK_50M;
+logic  [7:0] LED;
+assign CLK_50M =  CLOCK_50;
+assign LEDR[7:0] = LED[7:0];
+
+
+wire            [7:0]      LCD_DATA;
+wire                       LCD_EN;
+wire                       LCD_ON;
+wire                       LCD_RS;
+wire                       LCD_RW;
+
+assign GPIO_0[7:0] = LCD_DATA;
+assign GPIO_0[8] = LCD_EN;
+assign GPIO_0[9] = LCD_ON;
+assign GPIO_0[10] = LCD_RS;
+assign GPIO_0[11] = LCD_RS;
+assign GPIO_0[12] = LCD_RW;
+
+
 wire Clock_1KHz, Clock_1Hz;
 wire Sample_Clk_Signal;
 
@@ -200,26 +202,34 @@ wire Sample_Clk_Signal;
 // Insert your code for Lab1 here!
 //
 //
-logic newclock;	
-logic reset;
-logic [31:0]d;
-logic [31:0]desiredfreq;
-//logic ledclock;
-logic clk_1k;
-logic [31:0]d1;
-logic reset2;
-getdesiredfreq getfreq (.clk(CLK_50M), .SW(SW[3:1]),.desiredfreq(desiredfreq));
+logic newclock; //new clock values
+logic reset; //logic for reseting the counter
+logic [31:0]d; //stores to count for the speaker clock
+logic [31:0]desiredfreq; // stores the desired frequency to calculate the number needed to count too
+logic clk_1k; //new clock for led lights
+logic [31:0]d1; // stores the count for the led clock
+logic reset2; // reset value for led clock
+ 
+logic [23:0] LcdDisplay; 
+logic [15:0] LcdinfoDisplay;
+logic [47:0] ScopeInfoA;
+logic [31:0] ScopeInfoB;
+
+// components for speakers
+getdesiredfreq getfreq (.clk(CLK_50M), .SW(SW[3:1]),.desiredfreq(desiredfreq),
+.LcdDisplay(LcdDisplay),.LcdinfoDisplay(LcdinfoDisplay),.ScopeInfoA(ScopeInfoA),.ScopeInfoB(ScopeInfoB));
 counter counter1(.clk(CLK_50M), .reset(reset), .Q(d));
 clockdiv clockdiv1(.d(d),.desiredfreq(desiredfreq),.clk(CLK_50M),.reset(reset),.newclock(newclock));
 mux2 mux (.a(newclock), .b(1'b0),.sel(SW[0]),.out(Sample_Clk_Signal));
 
+//componenets for led lights
 LEDLIGHTS lights_1K (.clock(clk_1k),.LED(LED[7:0]));
 counter counter2(.clk(CLK_50M), .reset(reset2), .Q(d1));
 clockdiv_1hz clock1k (.clk(CLK_50M),.newclock(clk_1k),.d(d1),.reset(reset2));
 
 //Audio Generation Signal
 //Note that the audio needs signed data - so convert 1 bit to 8 bits signed
-wire [7:0] audio_data = {{4{~Sample_Clk_Signal}},{4{Sample_Clk_Signal}}}; //generate signed sample audio signal
+wire [7:0] audio_data = {{1{~Sample_Clk_Signal}},3'b000,{4{Sample_Clk_Signal}}}; //generate signed sample audio signal
 
 
 
@@ -288,24 +298,29 @@ LCD_Scope_Encapsulated_pacoblaze_wrapper LCD_LED_scope(
                     .clk(CLK_50M),  //don't touch
                           
                         //LCD Display values
-                      .InH(8'hAA),
-                      .InG(8'hBB),
-                      .InF(8'h01),
-                       .InE(8'h23),
-                      .InD(8'h45),
-                      .InC(8'h67),
-                      .InB(8'h89),
-                     .InA(8'h00),
+								//display frequency
+                      .InH(),
+                      .InG(),
+                      .InF(),
+                      .InE(),
+                      .InD(),
+                      .InC(),
+                      .InB(LcdinfoDisplay[15:8]),
+                     .InA(LcdinfoDisplay[7:0]),
+
                           
                      //LCD display information signals
-                         .InfoH({character_A,character_U}),
-                          .InfoG({character_S,character_W}),
-                          .InfoF({character_space,character_A}),
-                          .InfoE({character_N,character_space}),
-                          .InfoD({character_E,character_X}),
-                          .InfoC({character_A,character_M}),
-                          .InfoB({character_P,character_L}),
-                          .InfoA({character_E,character_exclaim}),
+							//displays something fun: HIPPOPOTAMUS are fun
+							//ALSO DISPLAYS NOTE
+                         .InfoH({character_H,character_I}),
+                          .InfoG({character_P,character_P}),
+                          .InfoF({character_O,character_P}),
+                          .InfoE({character_O,character_T}),
+                          .InfoD({character_A,character_M}),
+                          .InfoC({character_U,character_S}),
+                          .InfoB({character_exclaim,LcdDisplay[23:16]}),
+                          .InfoA({LcdDisplay[15:0]}),
+								  
                           
                   //choose to display the values or the oscilloscope
                           .choose_scope_or_LCD(choose_LCD_or_SCOPE),
@@ -315,13 +330,14 @@ LCD_Scope_Encapsulated_pacoblaze_wrapper LCD_LED_scope(
                           .scope_channelB(scope_channelB), //don't touch
                           
                   //scope information generation
-                          .ScopeInfoA({character_1,character_K,character_H,character_lowercase_z}),
-                          .ScopeInfoB({character_S,character_W,character_1,character_space}),
+						//display switch positions
+						// display note
+                          .ScopeInfoA(LcdDisplay),
+                          .ScopeInfoB(ScopeInfoB),
                           
                  //enable_scope is used to freeze the scope just before capturing 
                  //the waveform for display (otherwise the sampling would be unreliable)
                           .enable_scope(allow_run_LCD_scope) //don't touch
-                          
     );  
     
 
@@ -553,6 +569,8 @@ audio_control(
                     
             
 endmodule 
+
+//counter: increase the value to Q every clock cycle
 module counter(input logic clk, input logic reset, output logic [31:0] Q);
 always_ff @ (posedge (clk))
 begin 
@@ -565,6 +583,7 @@ begin
 end
 endmodule
 
+//new clock with 1 hz frequency 
 module clockdiv_1hz (input logic [31:0] d,input logic clk, output logic newclock,output logic reset);
 always_ff @ (posedge (clk))
 begin
@@ -585,7 +604,7 @@ begin
 end
 endmodule
 
-
+//new clock of frequency of input 
 module clockdiv (input logic [31:0] d,input logic [31:0] desiredfreq,input logic clk, output logic reset, output logic newclock);
 
 always_ff @ (posedge (clk))
@@ -607,28 +626,190 @@ begin
 end
 endmodule
 
-module getdesiredfreq (input logic clk, input logic [2:0] SW,output logic [31:0] desiredfreq);
+// set desired frequency, setting values for lcd and scope for signal tap display
+module getdesiredfreq (
+input logic clk, 
+input logic [2:0] SW,
+output logic [31:0] desiredfreq, 
+output logic [23:0] LcdDisplay,
+output logic [15:0] LcdinfoDisplay,
+output logic [47:0] ScopeInfoA,
+output logic [31:0] ScopeInfoB);
+
+
+//Character definitions
+
+//numbers
+parameter character_0 =8'h30;
+parameter character_1 =8'h31;
+parameter character_2 =8'h32;
+parameter character_3 =8'h33;
+parameter character_4 =8'h34;
+parameter character_5 =8'h35;
+parameter character_6 =8'h36;
+parameter character_7 =8'h37;
+parameter character_8 =8'h38;
+parameter character_9 =8'h39;
+
+
+//Uppercase Letters
+parameter character_A =8'h41;
+parameter character_B =8'h42;
+parameter character_C =8'h43;
+parameter character_D =8'h44;
+parameter character_E =8'h45;
+parameter character_F =8'h46;
+parameter character_G =8'h47;
+parameter character_H =8'h48;
+parameter character_I =8'h49;
+parameter character_J =8'h4A;
+parameter character_K =8'h4B;
+parameter character_L =8'h4C;
+parameter character_M =8'h4D;
+parameter character_N =8'h4E;
+parameter character_O =8'h4F;
+parameter character_P =8'h50;
+parameter character_Q =8'h51;
+parameter character_R =8'h52;
+parameter character_S =8'h53;
+parameter character_T =8'h54;
+parameter character_U =8'h55;
+parameter character_V =8'h56;
+parameter character_W =8'h57;
+parameter character_X =8'h58;
+parameter character_Y =8'h59;
+parameter character_Z =8'h5A;
+
+//Lowercase Letters
+parameter character_lowercase_a= 8'h61;
+parameter character_lowercase_b= 8'h62;
+parameter character_lowercase_c= 8'h63;
+parameter character_lowercase_d= 8'h64;
+parameter character_lowercase_e= 8'h65;
+parameter character_lowercase_f= 8'h66;
+parameter character_lowercase_g= 8'h67;
+parameter character_lowercase_h= 8'h68;
+parameter character_lowercase_i= 8'h69;
+parameter character_lowercase_j= 8'h6A;
+parameter character_lowercase_k= 8'h6B;
+parameter character_lowercase_l= 8'h6C;
+parameter character_lowercase_m= 8'h6D;
+parameter character_lowercase_n= 8'h6E;
+parameter character_lowercase_o= 8'h6F;
+parameter character_lowercase_p= 8'h70;
+parameter character_lowercase_q= 8'h71;
+parameter character_lowercase_r= 8'h72;
+parameter character_lowercase_s= 8'h73;
+parameter character_lowercase_t= 8'h74;
+parameter character_lowercase_u= 8'h75;
+parameter character_lowercase_v= 8'h76;
+parameter character_lowercase_w= 8'h77;
+parameter character_lowercase_x= 8'h78;
+parameter character_lowercase_y= 8'h79;
+parameter character_lowercase_z= 8'h7A;
+
+//Other Characters
+parameter character_colon = 8'h3A;          //':'
+parameter character_stop = 8'h2E;           //'.'
+parameter character_semi_colon = 8'h3B;   //';'
+parameter character_minus = 8'h2D;         //'-'
+parameter character_divide = 8'h2F;         //'/'
+parameter character_plus = 8'h2B;          //'+'
+parameter character_comma = 8'h2C;          // ','
+parameter character_less_than = 8'h3C;    //'<'
+parameter character_greater_than = 8'h3E; //'>'
+parameter character_equals = 8'h3D;         //'='
+parameter character_question = 8'h3F;      //'?'
+parameter character_dollar = 8'h24;         //'$'
+parameter character_space=8'h20;           //' '     
+parameter character_exclaim=8'h21;          //'!'
+
+
 always_comb
 	case(SW[2:0])
-	3'b000: desiredfreq=32'd587;
-	3'b001: desiredfreq=32'd523;
-	3'b010: desiredfreq=32'd659;
-	3'b011: desiredfreq=32'd698;
-	3'b100: desiredfreq=32'd783;
-	3'b101: desiredfreq=32'd987;
-	3'b110: desiredfreq=32'd880;
-	3'b111: desiredfreq=32'd1046;
-	default: desiredfreq=32'd1000;
+	3'b000: 
+		begin
+		desiredfreq=32'd523; 
+		LcdDisplay={character_D,character_O,character_space}; 
+		LcdinfoDisplay=16'h0523;
+		ScopeInfoA={character_5,character_2,character_3,character_H,character_lowercase_z,character_space};
+				ScopeInfoB={character_S,character_0,character_0,character_0};
+		end
+	3'b001: 
+		begin 
+		desiredfreq=32'd587; 
+		LcdDisplay={character_R,character_E,character_space}; 
+		LcdinfoDisplay=16'h0587;
+		ScopeInfoA={character_5,character_8,character_7,character_H,character_lowercase_z,character_space};
+		ScopeInfoB={character_S,character_0,character_0,character_1};
+		end
+	3'b010: 
+		begin 
+		desiredfreq=32'd659; 
+		LcdDisplay={character_M, character_E,character_space}; 
+		LcdinfoDisplay=16'h0659;
+		ScopeInfoA={character_6,character_5,character_9,character_H,character_lowercase_z,character_space};
+				ScopeInfoB={character_S,character_0,character_1,character_0};
+		end
+	3'b011: 
+		begin 
+		desiredfreq=32'd698; 
+		LcdDisplay={character_F, character_A,character_space}; 
+		LcdinfoDisplay=16'h0698;
+		ScopeInfoA={character_6,character_9,character_8,character_H,character_lowercase_z,character_space};
+				ScopeInfoB={character_S,character_0,character_1,character_1};
+		end
+	3'b100: 
+		begin 
+		desiredfreq=32'd783; 
+		LcdDisplay={character_S, character_O,character_space}; 
+		LcdinfoDisplay=16'h0783;
+		ScopeInfoA={character_7,character_8,character_3,character_H,character_lowercase_z,character_space};
+				ScopeInfoB={character_S,character_1,character_0,character_0};
+		end
+	3'b101: 
+		begin 
+		desiredfreq=32'd880; 
+		LcdDisplay={character_L, character_A,character_space}; 
+		LcdinfoDisplay=16'h0880;
+		ScopeInfoA={character_8,character_8,character_0,character_H,character_lowercase_z,character_space};
+		ScopeInfoB={character_S,character_1,character_0,character_1};
+		end
+	3'b110: 
+		begin 
+		desiredfreq=32'd987; 
+		LcdDisplay={character_T, character_I,character_space};
+		LcdinfoDisplay={character_9,character_8,character_7,character_H,character_lowercase_z,character_space,character_S,character_W,character_1,character_1,character_0}; 
+		LcdinfoDisplay=16'h0987;
+		ScopeInfoA={character_9,character_8,character_7,character_H,character_lowercase_z,character_space};
+		ScopeInfoB={character_S,character_1,character_1,character_0};
+		end
+	3'b111: 
+		begin 
+		desiredfreq=32'd1046; 
+		LcdDisplay={character_D, character_O, character_2};
+		LcdinfoDisplay=16'h1046;
+		ScopeInfoA={character_1,character_0,character_4,character_6,character_H,character_lowercase_z,character_space};
+		ScopeInfoB={character_S,character_1,character_1,character_1};
+		end
+	default:
+		begin 
+		desiredfreq=32'd1000; 
+		LcdDisplay={character_N, character_O,character_space};		
+		LcdinfoDisplay=16'h1000;
+		ScopeInfoA={character_1,character_0,character_0,character_0,character_H,character_lowercase_z,character_space};
+		ScopeInfoB={character_S,character_lowercase_z,character_lowercase_z,character_lowercase_z};
+		end 
 	endcase
 endmodule 
 
-
+//two input mux
 module mux2 (input logic a, input logic b, input logic sel, output logic out);
 assign out=sel?a:b;
 endmodule
 
 
-
+//module the initiate led lights in pattern of knightrider
 module LEDLIGHTS(input logic clock, output logic [7:0]LED);
 
 logic [3:0] current;
@@ -640,7 +821,7 @@ lightdirection directiondecide (.clock(clock),.nextlight(next),.direction(direct
 flipflop currentnextshift (.clock(clock), .a(next),.out(current));
 endmodule
 
-
+// module that turns on lights and indicate next light in the direction from input. direction 0=forward, direction 1=backwards
 module lightshift (input logic clock, input logic direction, input logic [3:0] currentlight,output logic [3:0] nextlight, output logic [7:0] LED);
 always_ff @ (posedge clock)
 if (direction)
@@ -661,7 +842,7 @@ nextlight=4'b0;
 end
 endmodule
 
-
+//change direction when the current light reaches the end of the cycle
 module lightdirection (input logic clock, input logic [3:0] nextlight, output logic direction);
 always_ff @ (posedge clock)
 if (nextlight==4'd7)
@@ -672,6 +853,7 @@ else
 	direction=direction;
 endmodule
 
+//4 bit flip flop
 module flipflop (input logic [3:0] a, input logic clock, output logic [3:0]out);
 always_ff@(posedge clock)
 out<=a;
